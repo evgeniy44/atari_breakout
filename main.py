@@ -1,4 +1,6 @@
 import gym
+
+from breakout_simple_agent import SimpleBreakoutAgent
 from deep_q_agent import DeepQAgent
 from experiment import Experiment
 
@@ -6,7 +8,7 @@ env = gym.make('Breakout-v0')
 env.reset()
 agent = DeepQAgent(env.action_space)
 experiment = Experiment(env, agent)
-experiment.run_simple(5, interactive=True)
+experiment.run_it(5000, interactive=True)
 
 
 # env.reset()

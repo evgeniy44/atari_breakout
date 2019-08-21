@@ -16,8 +16,8 @@ class SimpleBreakoutAgent(agent.Agent):
     def act(self, state):
 
 
-        height = 155
-        width = 120
+        height = 84
+        width = 84
         dim = (width, height)
         res_img = cv2.resize(state, dim, interpolation=cv2.INTER_LINEAR)
 
