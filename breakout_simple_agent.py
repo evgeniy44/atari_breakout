@@ -1,5 +1,7 @@
 import agent
-import numpy as np
+import matplotlib.pyplot as plt
+import cv2
+
 
 class SimpleBreakoutAgent(agent.Agent):
 
@@ -12,7 +14,22 @@ class SimpleBreakoutAgent(agent.Agent):
         self.lambda_ = lambda_
 
     def act(self, state):
+
+
+        height = 155
+        width = 120
+        dim = (width, height)
+        res_img = cv2.resize(state, dim, interpolation=cv2.INTER_LINEAR)
+
+        self.display_one(res_img)
+
         return self.action_space.sample()
 
     def reset(self):
         pass
+
+    # Display one image
+    def display_one(self, a, title1="Original"):
+        plt.imshow(a), plt.title(title1)
+        plt.xticks([]), plt.yticks([])
+        plt.show()

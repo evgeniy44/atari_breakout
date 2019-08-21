@@ -1,11 +1,10 @@
 import gym
-import time
-from breakout_simple_agent import SimpleBreakoutAgent
+from deep_q_agent import DeepQAgent
 from experiment import Experiment
 
 env = gym.make('Breakout-v0')
 env.reset()
-agent = SimpleBreakoutAgent(env.action_space)
+agent = DeepQAgent(env.action_space)
 experiment = Experiment(env, agent)
 experiment.run_simple(5, interactive=True)
 
