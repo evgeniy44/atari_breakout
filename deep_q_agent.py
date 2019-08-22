@@ -13,8 +13,8 @@ INPUT_SIZE = 84 * 84 * 3 + 1
 
 class DeepQAgent(agent.Agent):
 
-    def __init__(self, action_space, epsilon=0.1, alpha=0.5, gamma=0.9, lambda_=0.7, minibatch_size=32,
-                 epoch_length=250, steps_to_copy=1000):
+    def __init__(self, action_space, epsilon=1, alpha=0.5, gamma=0.9, lambda_=0.7, minibatch_size=32,
+                 epoch_length=50000, steps_to_copy=1000):
         super(DeepQAgent, self).__init__(action_space)
 
         self.steps_to_copy = steps_to_copy
@@ -33,6 +33,11 @@ class DeepQAgent(agent.Agent):
         self.maes = []
         self.mses = []
 
+        if self.epsilon == 1:
+            self.epsilon_decay = True
+        else:
+            self.epsilon_decay = False
+
     def act(self, state):
         if np.random.random() < self.epsilon:
             act = self.action_space.sample()
@@ -49,7 +54,13 @@ class DeepQAgent(agent.Agent):
                     ties.append(current_action)
             act = np.random.choice(ties)
 
+        if self.epsilon_decay:
+            if self.step_counter % 5000 == 0:
+                self.epsilon = max(.01, self.epsilon * .95)
+
         self.step_counter += 1
+
+
         return act
 
     def learn(self, state1, action1, reward, state2, done):
