@@ -4,6 +4,7 @@ import cv2
 
 from keras import models
 from keras import layers
+from matplotlib import pyplot as plt
 
 from replay import ReplayMemory
 
@@ -29,6 +30,8 @@ class DeepQAgent(agent.Agent):
         self.target_network.set_weights(self.model_network.get_weights())
         self.experience_replay = ReplayMemory(max_size=50000, observation_size=INPUT_SIZE - 1)
         self.step_counter = 0
+        self.maes = []
+        self.mses = []
 
     def act(self, state):
         if np.random.random() < self.epsilon:
@@ -37,8 +40,7 @@ class DeepQAgent(agent.Agent):
             max_value = -1000000
             ties = []
             for current_action in range(self.action_space.n):
-                action_value = self.model_network.predict(self.normalize(state, current_action), batch_size=1,
-                                                          verbose=True)
+                action_value = self.model_network.predict(self.normalize(state, current_action), batch_size=1, verbose=False)
                 if np.ndarray.item(action_value) > max_value:
                     ties.clear()
                     ties.append(current_action)
@@ -64,27 +66,46 @@ class DeepQAgent(agent.Agent):
 
         for current_action in range(self.action_space.n):
             actions = np.full(shape=(self.minibatch_size, 1, 1), fill_value=current_action).astype('float32') / 4
-            state_and_action = np.append(s_next, actions)
-            input = np.reshape(state_and_action, (self.minibatch_size, INPUT_SIZE))
+            input = np.reshape(np.append(s_next, actions, axis=2), (self.minibatch_size, INPUT_SIZE))
             predict = self.target_network.predict(input)
             s_next_predictions[:, current_action] = np.reshape(predict, 32)
 
         s_next_max_values = s_next_predictions.max(axis=1, keepdims=True)
-
+        expected_state_values = (1 - is_terminal) * self.gamma * s_next_max_values + reward
         formatted_actions = np.reshape(action, (self.minibatch_size, 1, 1))
 
-        current_state_and_action = np.reshape(np.append(state, formatted_actions), (self.minibatch_size, INPUT_SIZE))
+        current_state_and_action = np.reshape(np.append(s_next, formatted_actions, axis=2), (self.minibatch_size, INPUT_SIZE))
+        # current_state_and_action = np.reshape(np.append(state, formatted_actions), (self.minibatch_size, INPUT_SIZE))
 
-        history = self.model_network.fit(current_state_and_action,
-                                         s_next_max_values,
-                                         epochs=1,
-                                         verbose=0,
-                                         batch_size=self.minibatch_size)
+        mse, mae = self.model_network.train_on_batch(current_state_and_action, expected_state_values)
+
+        if self.step_counter % 50 == 0:
+            self.maes.append(mae)
+            self.mses.append(mse)
+            print("Step: " + str(self.step_counter) + ", mae: " + str(mae) + ", mse: " + str(mse))
 
         if self.step_counter % self.steps_to_copy == 0:
             self.target_network.set_weights(self.model_network.get_weights())
 
-        return history
+        return mse, mae
+
+    def plot_training_stats(self):
+        # Plot the episode length over time
+        fig1 = plt.figure(figsize=(10, 5))
+        plt.plot(self.mses)
+        plt.xlabel("Steps / 50")
+        plt.ylabel("MSE")
+        plt.title("MSE over time")
+
+        # Plot the episode reward over time
+        fig2 = plt.figure(figsize=(10, 5))
+        plt.plot(self.maes)
+        plt.xlabel("Steps / 50")
+        plt.ylabel("MAE")
+        plt.title("MAE over Time")
+        plt.show()
+
+        return fig1, fig2
 
     def reset(self):
         pass
