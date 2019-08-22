@@ -49,8 +49,8 @@ class Experiment(object):
             self.episode_length = np.append(self.episode_length, t)  # keep episode length - for display
             self.episode_reward = np.append(self.episode_reward, R)
 
-            if episode_number % 100 == 0:
-                plotting.plot_episode_stats(self.episode_length, self.episode_reward)
+            # if episode_number % 100 == 0:
+            #     plotting.plot_episode_stats(self.episode_length, self.episode_reward)
 
         plotting.plot_episode_stats(self.episode_length, self.episode_reward)
 

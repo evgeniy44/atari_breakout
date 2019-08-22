@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 
 from replay import ReplayMemory
 
-INPUT_SIZE = 84 * 84 * 3 + 1
+INPUT_SIZE = 84 * 84 * 3
 
 
 class DeepQAgent(agent.Agent):
@@ -28,7 +28,7 @@ class DeepQAgent(agent.Agent):
         self.model_network = self.build_model()
         self.target_network = self.build_model()
         self.target_network.set_weights(self.model_network.get_weights())
-        self.experience_replay = ReplayMemory(max_size=50000, observation_size=INPUT_SIZE - 1)
+        self.experience_replay = ReplayMemory(max_size=50000, observation_size=INPUT_SIZE)
         self.step_counter = 0
         self.maes = []
         self.mses = []
@@ -42,17 +42,9 @@ class DeepQAgent(agent.Agent):
         if np.random.random() < self.epsilon:
             act = self.action_space.sample()
         else:
-            max_value = -1000000
-            ties = []
-            for current_action in range(self.action_space.n):
-                action_value = self.model_network.predict(self.normalize(state, current_action), batch_size=1, verbose=False)
-                if np.ndarray.item(action_value) > max_value:
-                    ties.clear()
-                    ties.append(current_action)
-                    max_value = action_value
-                elif action_value == max_value:
-                    ties.append(current_action)
-            act = np.random.choice(ties)
+
+            action_values = self.model_network.predict(self.normalize_state(state), batch_size=1, verbose=False)
+            act = action_values.argmax()
 
         if self.epsilon_decay:
             if self.step_counter % 5000 == 0:
@@ -73,22 +65,17 @@ class DeepQAgent(agent.Agent):
         (state, action, reward, s_next, is_terminal) = self.experience_replay.sample_minibatch(
             self.minibatch_size)  # return data from 32 steps
 
-        s_next_predictions = np.zeros((self.minibatch_size, self.num_actions), dtype=np.float32)
+        next_state_action_values = self.target_network.predict(np.reshape(s_next, (self.minibatch_size, INPUT_SIZE)))
+        s_next_max_values = next_state_action_values.max(axis=1, keepdims=True)
 
-        for current_action in range(self.action_space.n):
-            actions = np.full(shape=(self.minibatch_size, 1, 1), fill_value=current_action).astype('float32') / 4
-            input = np.reshape(np.append(s_next, actions, axis=2), (self.minibatch_size, INPUT_SIZE))
-            predict = self.target_network.predict(input)
-            s_next_predictions[:, current_action] = np.reshape(predict, 32)
+        current_state_values = self.model_network.predict(np.reshape(state, (self.minibatch_size, INPUT_SIZE)))
 
-        s_next_max_values = s_next_predictions.max(axis=1, keepdims=True)
         expected_state_values = (1 - is_terminal) * self.gamma * s_next_max_values + reward
-        formatted_actions = np.reshape(action, (self.minibatch_size, 1, 1))
 
-        current_state_and_action = np.reshape(np.append(s_next, formatted_actions, axis=2), (self.minibatch_size, INPUT_SIZE))
-        # current_state_and_action = np.reshape(np.append(state, formatted_actions), (self.minibatch_size, INPUT_SIZE))
+        for i in range(self.minibatch_size):
+            current_state_values[i, action[i]] = expected_state_values[i]
 
-        mse, mae = self.model_network.train_on_batch(current_state_and_action, expected_state_values)
+        mse, mae = self.model_network.train_on_batch(np.reshape(state, (self.minibatch_size, INPUT_SIZE)), current_state_values)
 
         if self.step_counter % 50 == 0:
             self.maes.append(mae)
@@ -132,7 +119,7 @@ class DeepQAgent(agent.Agent):
     def normalize_state(self, state):
         dim = (84, 84)
         resized_state = cv2.resize(state, dim, interpolation=cv2.INTER_LINEAR)
-        flatten_state = np.reshape(resized_state, (1, INPUT_SIZE - 1))
+        flatten_state = np.reshape(resized_state, (1, INPUT_SIZE))
         flatten_state = flatten_state.astype('float32') / 255
         return flatten_state
 
@@ -140,6 +127,6 @@ class DeepQAgent(agent.Agent):
         model = models.Sequential()
         model.add(layers.Dense(512, activation='relu', input_shape=(INPUT_SIZE,)))  # TODO regularization
         model.add(layers.Dense(512, activation='relu'))
-        model.add(layers.Dense(1))
+        model.add(layers.Dense(4))
         model.compile(optimizer='rmsprop', loss='mse', metrics=['mae'])
         return model
