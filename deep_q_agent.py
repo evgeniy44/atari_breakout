@@ -28,7 +28,7 @@ class DeepQAgent(agent.Agent):
         self.model_network = self.build_model()
         self.target_network = self.build_model()
         self.target_network.set_weights(self.model_network.get_weights())
-        self.experience_replay = ReplayMemory(max_size=50000, observation_size=INPUT_SIZE)
+        self.experience_replay = ReplayMemory(max_size=200000, observation_size=INPUT_SIZE)
         self.step_counter = 0
         self.maes = []
         self.mses = []
