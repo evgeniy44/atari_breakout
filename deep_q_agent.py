@@ -8,13 +8,13 @@ from matplotlib import pyplot as plt
 
 from replay import ReplayMemory
 
-INPUT_SIZE = 84 * 84 * 3
+INPUT_SIZE = 84 * 84
 
 
 class DeepQAgent(agent.Agent):
 
     def __init__(self, action_space, epsilon=1, alpha=0.5, gamma=0.9, lambda_=0.7, minibatch_size=32,
-                 epoch_length=50000, steps_to_copy=1000):
+                 epoch_length=50000, steps_to_copy=10000):
         super(DeepQAgent, self).__init__(action_space)
 
         self.steps_to_copy = steps_to_copy
@@ -58,7 +58,7 @@ class DeepQAgent(agent.Agent):
     def learn(self, state1, action1, reward, state2, done):
         self.experience_replay.observe(self.normalize_state(state1), action1, reward, done)
 
-        if self.step_counter > self.epoch_length:  # 1 epoch is 100 steps
+        if self.step_counter > self.epoch_length:
             self.current_loss = self.update_model()
 
     def update_model(self):
@@ -77,7 +77,7 @@ class DeepQAgent(agent.Agent):
 
         mse, mae = self.model_network.train_on_batch(np.reshape(state, (self.minibatch_size, INPUT_SIZE)), current_state_values)
 
-        if self.step_counter % 50 == 0:
+        if self.step_counter % 1000 == 0:
             self.maes.append(mae)
             self.mses.append(mse)
             print("Step: " + str(self.step_counter) + ", mae: " + str(mae) + ", mse: " + str(mse))
@@ -116,9 +116,12 @@ class DeepQAgent(agent.Agent):
         normalized = np.append(flatten_state, flatten_action)
         return np.reshape(normalized, (1, INPUT_SIZE))
 
+    def rgb2gray(self, rgb):
+        return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
+
     def normalize_state(self, state):
         dim = (84, 84)
-        resized_state = cv2.resize(state, dim, interpolation=cv2.INTER_LINEAR)
+        resized_state = cv2.resize(self.rgb2gray(state), dim, interpolation=cv2.INTER_LINEAR)
         flatten_state = np.reshape(resized_state, (1, INPUT_SIZE))
         flatten_state = flatten_state.astype('float32') / 255
         return flatten_state

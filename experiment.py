@@ -40,6 +40,8 @@ class Experiment(object):
                 next_action = self.agent.act(next_state)
                 action = next_action
 
+                state = next_state
+
                 R += reward  # accumulate reward - for display
 
                 # if interactive display, show update for each step
@@ -49,8 +51,10 @@ class Experiment(object):
             self.episode_length = np.append(self.episode_length, t)  # keep episode length - for display
             self.episode_reward = np.append(self.episode_reward, R)
 
-            # if episode_number % 100 == 0:
-            #     plotting.plot_episode_stats(self.episode_length, self.episode_reward)
+            if episode_number % 100 == 0:
+                avg_reward = np.average(self.episode_reward[episode_number - 100:])
+                avg_length = np.average(self.episode_length[episode_number - 100:])
+                print("Over batch: " + str(episode_number % 100) + " last 100 episodes avg reward: " + str(avg_reward) + ", length: " + str(avg_length))
 
         plotting.plot_episode_stats(self.episode_length, self.episode_reward)
 
