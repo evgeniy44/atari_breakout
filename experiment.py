@@ -54,7 +54,7 @@ class Experiment(object):
             if episode_number % 100 == 0:
                 avg_reward = np.average(self.episode_reward[episode_number - 100:])
                 avg_length = np.average(self.episode_length[episode_number - 100:])
-                print("Over batch: " + str(episode_number % 100) + " last 100 episodes avg reward: " + str(avg_reward) + ", length: " + str(avg_length))
+                print("Over batch: " + str(episode_number // 100) + " last 100 episodes avg reward: " + str(avg_reward) + ", length: " + str(avg_length))
 
         plotting.plot_episode_stats(self.episode_length, self.episode_reward)
 

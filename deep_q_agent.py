@@ -107,14 +107,14 @@ class DeepQAgent(agent.Agent):
 
     def reset(self):
         pass
-
-    def normalize(self, state, current_action):
-        flatten_state = self.normalize_state(state)
-        flatten_action = np.array(current_action)
-        flatten_action = (flatten_action.astype('float32') / 4).astype('float32')
-
-        normalized = np.append(flatten_state, flatten_action)
-        return np.reshape(normalized, (1, INPUT_SIZE))
+    #
+    # def normalize(self, state, current_action):
+    #     flatten_state = self.normalize_state(state)
+    #     flatten_action = np.array(current_action)
+    #     flatten_action = (flatten_action.astype('float32') / 4).astype('float32')
+    #
+    #     normalized = np.append(flatten_state, flatten_action)
+    #     return np.reshape(normalized, (1, INPUT_SIZE))
 
     def rgb2gray(self, rgb):
         return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
