@@ -4,11 +4,12 @@ import cv2
 
 from keras import models
 from keras import layers
+from keras import optimizers
 from matplotlib import pyplot as plt
 
 from replay import ReplayMemory
 
-INPUT_SIZE = 84 * 84
+INPUT_SIZE = 84 * 84 + 1
 
 
 class DeepQAgent(agent.Agent):
@@ -28,7 +29,7 @@ class DeepQAgent(agent.Agent):
         self.model_network = self.build_model()
         self.target_network = self.build_model()
         self.target_network.set_weights(self.model_network.get_weights())
-        self.experience_replay = ReplayMemory(max_size=200000, observation_size=INPUT_SIZE)
+        self.experience_replay = ReplayMemory(max_size=200000, observation_size=INPUT_SIZE - 1)
         self.step_counter = 0
         self.maes = []
         self.mses = []
@@ -42,12 +43,20 @@ class DeepQAgent(agent.Agent):
         if np.random.random() < self.epsilon:
             act = self.action_space.sample()
         else:
-
-            action_values = self.model_network.predict(self.normalize_state(state), batch_size=1, verbose=False)
-            act = action_values.argmax()
+            max_value = -1000000
+            ties = []
+            for current_action in range(self.action_space.n):
+                action_value = self.model_network.predict(self.normalize(state, current_action), batch_size=1, verbose=False)
+                if np.ndarray.item(action_value) > max_value:
+                    ties.clear()
+                    ties.append(current_action)
+                    max_value = action_value
+                elif action_value == max_value:
+                    ties.append(current_action)
+            act = np.random.choice(ties)
 
         if self.epsilon_decay:
-            if self.step_counter % 5000 == 0:
+            if self.step_counter > self.epoch_length and self.step_counter % 5000 == 0:
                 self.epsilon = max(.01, self.epsilon * .95)
 
         self.step_counter += 1
@@ -65,17 +74,22 @@ class DeepQAgent(agent.Agent):
         (state, action, reward, s_next, is_terminal) = self.experience_replay.sample_minibatch(
             self.minibatch_size)  # return data from 32 steps
 
-        next_state_action_values = self.target_network.predict(np.reshape(s_next, (self.minibatch_size, INPUT_SIZE)))
-        s_next_max_values = next_state_action_values.max(axis=1, keepdims=True)
+        s_next_predictions = np.zeros((self.minibatch_size, self.num_actions), dtype=np.float32)
 
-        current_state_values = self.model_network.predict(np.reshape(state, (self.minibatch_size, INPUT_SIZE)))
+        for current_action in range(self.action_space.n):
+            actions = np.full(shape=(self.minibatch_size, 1, 1), fill_value=current_action).astype('float32') / 4
+            input = np.reshape(np.append(s_next, actions, axis=2), (self.minibatch_size, INPUT_SIZE))
+            predict = self.target_network.predict(input)
+            s_next_predictions[:, current_action] = np.reshape(predict, 32)
 
+        s_next_max_values = s_next_predictions.max(axis=1, keepdims=True)
         expected_state_values = (1 - is_terminal) * self.gamma * s_next_max_values + reward
+        formatted_actions = np.reshape(action, (self.minibatch_size, 1, 1))
 
-        for i in range(self.minibatch_size):
-            current_state_values[i, action[i]] = expected_state_values[i]
+        current_state_and_action = np.reshape(np.append(s_next, formatted_actions, axis=2), (self.minibatch_size, INPUT_SIZE))
+        # current_state_and_action = np.reshape(np.append(state, formatted_actions), (self.minibatch_size, INPUT_SIZE))
 
-        mse, mae = self.model_network.train_on_batch(np.reshape(state, (self.minibatch_size, INPUT_SIZE)), current_state_values)
+        mse, mae = self.model_network.train_on_batch(current_state_and_action, expected_state_values)
 
         if self.step_counter % 1000 == 0:
             self.maes.append(mae)
@@ -107,14 +121,14 @@ class DeepQAgent(agent.Agent):
 
     def reset(self):
         pass
-    #
-    # def normalize(self, state, current_action):
-    #     flatten_state = self.normalize_state(state)
-    #     flatten_action = np.array(current_action)
-    #     flatten_action = (flatten_action.astype('float32') / 4).astype('float32')
-    #
-    #     normalized = np.append(flatten_state, flatten_action)
-    #     return np.reshape(normalized, (1, INPUT_SIZE))
+
+    def normalize(self, state, current_action):
+        flatten_state = self.normalize_state(state)
+        flatten_action = np.array(current_action)
+        flatten_action = (flatten_action.astype('float32') / 4).astype('float32')
+
+        normalized = np.append(flatten_state, flatten_action)
+        return np.reshape(normalized, (1, INPUT_SIZE))
 
     def rgb2gray(self, rgb):
         return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
@@ -122,7 +136,7 @@ class DeepQAgent(agent.Agent):
     def normalize_state(self, state):
         dim = (84, 84)
         resized_state = cv2.resize(self.rgb2gray(state), dim, interpolation=cv2.INTER_LINEAR)
-        flatten_state = np.reshape(resized_state, (1, INPUT_SIZE))
+        flatten_state = np.reshape(resized_state, (1, INPUT_SIZE - 1))
         flatten_state = flatten_state.astype('float32') / 255
         return flatten_state
 
@@ -130,6 +144,8 @@ class DeepQAgent(agent.Agent):
         model = models.Sequential()
         model.add(layers.Dense(512, activation='relu', input_shape=(INPUT_SIZE,)))  # TODO regularization
         model.add(layers.Dense(512, activation='relu'))
-        model.add(layers.Dense(4))
-        model.compile(optimizer='rmsprop', loss='mse', metrics=['mae'])
+        model.add(layers.Dense(512, activation='relu'))
+        model.add(layers.Dense(1))
+        rms = optimizers.RMSprop(lr=0.0005)
+        model.compile(optimizer=rms, loss='mse', metrics=['mae'])
         return model
