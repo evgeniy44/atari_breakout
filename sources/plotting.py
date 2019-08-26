@@ -1,4 +1,3 @@
-from collections import namedtuple
 from matplotlib import pyplot as plt
 
 

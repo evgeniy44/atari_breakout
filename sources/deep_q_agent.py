@@ -1,12 +1,6 @@
-from sources import agent
 import numpy as np
-import cv2
 
-from keras import models
-from keras import layers
-from keras import optimizers
-from matplotlib import pyplot as plt
-
+from sources import agent
 from sources.replay import ReplayMemory
 
 INPUT_SIZE = 84 * 84 * 4 + 1
@@ -14,7 +8,8 @@ INPUT_SIZE = 84 * 84 * 4 + 1
 
 class DeepQAgent(agent.Agent):
 
-    def __init__(self, action_space, normalizer, epsilon=1, alpha=0.5, gamma=0.99, lambda_=0.7, minibatch_size=32,
+    def __init__(self, action_space, normalizer, model_network, target_network, epsilon=1, alpha=0.5, gamma=0.99,
+                 lambda_=0.7, minibatch_size=32,
                  epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=70000):
         super(DeepQAgent, self).__init__(action_space)
 
@@ -33,8 +28,8 @@ class DeepQAgent(agent.Agent):
         self.last_action = 1
         self.episode_step = 0
 
-        self.model_network = self.build_model()
-        self.target_network = self.build_model()
+        self.model_network = model_network
+        self.target_network = target_network
         self.target_network.set_weights(self.model_network.get_weights())
         self.experience_replay = ReplayMemory(max_size=experience_size, observation_size=INPUT_SIZE - 1)
         self.step_counter = 0
@@ -55,8 +50,9 @@ class DeepQAgent(agent.Agent):
         else:
             max_value = -10000000
             ties = []
-            for current_action in range(3):  # left or right
-                action_value = self.model_network.predict(self.normalizer.normalize_input(self.frame, current_action), batch_size=1,
+            for current_action in range(self.num_actions):
+                action_value = self.model_network.predict(self.normalizer.normalize_input(self.frame, current_action),
+                                                          batch_size=1,
                                                           verbose=False)
                 if np.ndarray.item(action_value) > max_value:
                     ties.clear()
@@ -64,7 +60,7 @@ class DeepQAgent(agent.Agent):
                     max_value = action_value
                 elif action_value == max_value:
                     ties.append(current_action)
-            act = np.random.choice(ties) + 1  # actions 0 and 1 do nothing in Atari breakout
+            act = np.random.choice(ties)  # actions 0 and 1 do nothing in Atari breakout
 
         if self.epsilon_decay:
             if self.step_counter > self.epoch_length and self.step_counter % 5000 == 0:
@@ -92,7 +88,7 @@ class DeepQAgent(agent.Agent):
         (state, action, reward, s_next, is_terminal) = self.experience_replay.sample_minibatch(
             self.minibatch_size)  # return data from 32 steps
 
-        s_next_predictions = np.zeros((self.minibatch_size, 2), dtype=np.float32) #num actions = 2
+        s_next_predictions = np.zeros((self.minibatch_size, 2), dtype=np.float32)  # num actions = 2
 
         for current_action in range(3):  # left and right
             actions = np.full(shape=(self.minibatch_size, 1, 1), fill_value=current_action).astype('float32')
@@ -106,7 +102,6 @@ class DeepQAgent(agent.Agent):
 
         current_state_and_action = np.reshape(np.append(s_next, formatted_actions, axis=2),
                                               (self.minibatch_size, INPUT_SIZE))
-        # current_state_and_action = np.reshape(np.append(state, formatted_actions), (self.minibatch_size, INPUT_SIZE))
 
         mse, mae = self.model_network.train_on_batch(current_state_and_action, expected_state_values)
 
@@ -120,34 +115,6 @@ class DeepQAgent(agent.Agent):
 
         return mse, mae
 
-    def plot_training_stats(self):
-        # Plot the episode length over time
-        fig1 = plt.figure(figsize=(10, 5))
-        plt.plot(self.mses)
-        plt.xlabel("Steps / 50")
-        plt.ylabel("MSE")
-        plt.title("MSE over time")
-
-        # Plot the episode reward over time
-        fig2 = plt.figure(figsize=(10, 5))
-        plt.plot(self.maes)
-        plt.xlabel("Steps / 50")
-        plt.ylabel("MAE")
-        plt.title("MAE over Time")
-        plt.show()
-
-        return fig1, fig2
-
     def reset(self):
         self.episode_step = 0
         pass
-
-    def build_model(self):
-        model = models.Sequential()
-        model.add(layers.Dense(512, activation='relu', input_shape=(INPUT_SIZE,)))  # TODO regularization
-        model.add(layers.Dense(512, activation='relu'))
-        model.add(layers.Dense(512, activation='relu'))
-        model.add(layers.Dense(1))
-        rms = optimizers.RMSprop(lr=0.0004)
-        model.compile(optimizer=rms, loss='mse', metrics=['mae'])
-        return model
