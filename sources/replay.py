@@ -11,9 +11,9 @@ class ReplayMemory(object):
         self.samples = {
             'state': np.zeros(self.max_size * 1 * self.observation_size, dtype=np.float32).reshape(
                 (self.max_size, self.observation_size)),
-            'action': np.zeros(self.max_size * 1, dtype=np.int16).reshape((self.max_size, 1)),
+            'action': np.zeros(self.max_size * 1, dtype=np.float32).reshape((self.max_size, 1)),
             'reward': np.zeros(self.max_size * 1).reshape((self.max_size, 1)),
-            'terminal': np.zeros(self.max_size * 1, dtype=np.int16).reshape((self.max_size, 1)),
+            'terminal': np.zeros(self.max_size * 1, dtype=np.float32).reshape((self.max_size, 1)),
         }
 
     def observe(self, state, action, reward, done):
