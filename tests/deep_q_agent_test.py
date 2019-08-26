@@ -5,6 +5,7 @@ import numpy as np
 from gym.spaces.discrete import Discrete
 
 from sources.deep_q_agent import DeepQAgent
+from sources.input_normalizer import InputNormalizer
 from sources.model_factory import ModelFactory
 
 
@@ -138,6 +139,82 @@ class DeepQAgentTest(unittest.TestCase):
 
         self.assertTrue(np.array_equal(frame, agent.frame))
         self.assertEquals(agent.last_action, 1)
+
+    def test_learn_first_steps(self):
+        np.random.seed(1)
+
+        model = MagicMock()
+        target = MagicMock()
+        agent = DeepQAgent(action_space=Discrete(4), normalizer=InputNormalizer(dimensions=(84, 84), total_actions=4),
+                           experience_size=100, model_network=model, target_network=target)
+        experience_replay = Mock()
+        agent.experience_replay = experience_replay
+
+        agent.learn(state1=None, action1=1, reward=1, state2=None, done=False)
+        experience_replay.observe.assert_not_called()
+        model.predict.assert_not_called()
+        target.predict.assert_not_called()
+        target.train_on_batch.assert_not_called()
+        model.train_on_batch.assert_not_called()
+
+    def test_learn_step_frame(self):
+        np.random.seed(1)
+
+        model = MagicMock()
+        target = MagicMock()
+        agent = DeepQAgent(action_space=Discrete(4), normalizer=InputNormalizer(dimensions=(84, 84), total_actions=4),
+                           experience_size=100, model_network=model, target_network=target)
+        experience_replay = Mock()
+        agent.experience_replay = experience_replay
+        agent.episode_step = 4
+        frame_1 = np.append(np.ones(shape=(1, 84 * 84)), np.full(fill_value=2, shape=(1, 84 * 84)), axis=0)
+        frame_2 = np.append(np.full(fill_value=3, shape=(1, 84 * 84)),
+                            np.full(fill_value=4, shape=(1, 84 * 84)), axis=0)
+
+        agent.frame = np.append(frame_1, frame_2, axis=0)
+        agent.learn(state1=None, action1=2, reward=1, state2=None, done=False)
+
+        self.assertTrue(np.array_equal(agent.frame, experience_replay.observe.call_args_list[0][0][0]))
+        self.assertEquals(2, experience_replay.observe.call_args_list[0][0][1])
+        self.assertEquals(1, experience_replay.observe.call_args_list[0][0][2])
+        self.assertEquals(False, experience_replay.observe.call_args_list[0][0][3])
+        model.predict.assert_not_called()
+        target.predict.assert_not_called()
+        target.train_on_batch.assert_not_called()
+        model.train_on_batch.assert_not_called()
+
+    def test_learn_step_frame_plus_one(self):
+        np.random.seed(1)
+
+        model = MagicMock()
+        target = MagicMock()
+        agent = DeepQAgent(action_space=Discrete(4), normalizer=InputNormalizer(dimensions=(84, 84), total_actions=4),
+                           experience_size=100, model_network=model, target_network=target)
+        experience_replay = Mock()
+        agent.experience_replay = experience_replay
+        agent.episode_step = 5
+        frame_1 = np.append(np.ones(shape=(1, 84 * 84)), np.full(fill_value=2, shape=(1, 84 * 84)), axis=0)
+        frame_2 = np.append(np.full(fill_value=3, shape=(1, 84 * 84)),
+                            np.full(fill_value=4, shape=(1, 84 * 84)), axis=0)
+
+        agent.frame = np.append(frame_1, frame_2, axis=0)
+        agent.learn(state1=None, action1=2, reward=1, state2=None, done=False)
+
+        observation_1 = np.append(np.full(fill_value=2, shape=(1, 84 * 84)), np.full(fill_value=3, shape=(1, 84 * 84)),
+                                  axis=0)
+        observation_2 = np.append(np.full(fill_value=4, shape=(1, 84 * 84)),
+                                  np.full(fill_value=1, shape=(1, 84 * 84)), axis=0)
+
+        obs = np.append(observation_1, observation_2, axis=0)
+
+        self.assertTrue(np.array_equal(obs, experience_replay.observe.call_args_list[0][0][0]))
+        self.assertEquals(2, experience_replay.observe.call_args_list[0][0][1])
+        self.assertEquals(1, experience_replay.observe.call_args_list[0][0][2])
+        self.assertEquals(False, experience_replay.observe.call_args_list[0][0][3])
+        model.predict.assert_not_called()
+        target.predict.assert_not_called()
+        target.train_on_batch.assert_not_called()
+        model.train_on_batch.assert_not_called()
 
 
 if __name__ == '__main__':
