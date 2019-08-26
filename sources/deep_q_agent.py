@@ -8,8 +8,8 @@ INPUT_SIZE = 84 * 84 * 4 + 1
 
 class DeepQAgent(agent.Agent):
 
-    def __init__(self, action_space, normalizer, model_network, target_network, epsilon=1, alpha=0.5, gamma=0.99,
-                 lambda_=0.7, minibatch_size=32,
+    def __init__(self, action_space, normalizer, model_network, target_network, epsilon=1, gamma=0.99,
+                 minibatch_size=32,
                  epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=70000,
                  epsilon_decay_frequency=5000):
         super(DeepQAgent, self).__init__(action_space)
@@ -21,9 +21,7 @@ class DeepQAgent(agent.Agent):
         self.epoch_length = epoch_length
         self.minibatch_size = minibatch_size
         self.epsilon = epsilon
-        self.alpha = alpha
         self.gamma = gamma
-        self.lambda_ = lambda_
         self.frame = np.zeros(self.frame_size * 1 * 84 * 84, dtype=np.float32).reshape(
             (self.frame_size, 84 * 84))
         self.frame_reward = 0
