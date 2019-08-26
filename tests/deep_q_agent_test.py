@@ -49,6 +49,46 @@ class DeepQAgentTest(unittest.TestCase):
         self.assertEquals(agent.last_action, 3, "last action")
         self.assertTrue(np.array_equal(agent.frame[0], np.ones(shape=7056)))
 
+    def test_random_action_with_epsilon_decay(self):
+        np.random.seed(1)
+        model_factory = ModelFactory()
+        normalizer = Mock()
+        normalizer.normalize_state.return_value = np.ones(shape=(1, 7056))
+        agent = DeepQAgent(action_space=Discrete(4), normalizer=normalizer,
+                           experience_size=100, model_network=model_factory.build_model(84 * 84 + 1),
+                           target_network=model_factory.build_model(84 * 84 + 1),
+                           epoch_length=1, epsilon_decay_frequency=2)
+        state = np.random.randint(256, size=(210, 16, 3))
+
+        self.assertEquals(agent.act(state), 1, "Should Start with Action 1")
+        self.assertTrue(np.array_equal(agent.frame[0], np.ones(shape=7056)))
+        self.assertTrue(np.array_equal(agent.frame[1], np.zeros(shape=7056)))
+        self.assertEquals(agent.epsilon, 1)
+
+        self.assertEquals(agent.act(state), 1, "Should Start with Action 1")
+        self.assertTrue(np.array_equal(agent.frame[0], np.ones(shape=7056)))
+        self.assertTrue(np.array_equal(agent.frame[1], np.ones(shape=7056)))
+        self.assertTrue(np.array_equal(agent.frame[2], np.zeros(shape=7056)))
+        self.assertEquals(agent.epsilon, 1)
+
+        self.assertEquals(agent.act(state), 1, "Should Start with Action 1")
+        self.assertTrue(np.array_equal(agent.frame[0], np.ones(shape=7056)))
+        self.assertTrue(np.array_equal(agent.frame[1], np.ones(shape=7056)))
+        self.assertTrue(np.array_equal(agent.frame[2], np.ones(shape=7056)))
+        self.assertTrue(np.array_equal(agent.frame[3], np.zeros(shape=7056)))
+        self.assertEquals(agent.epsilon, 0.98)
+
+        self.assertEquals(agent.act(state), 3, "Should Make random action")
+        self.assertTrue(np.array_equal(agent.frame[0], np.ones(shape=7056)))
+        self.assertTrue(np.array_equal(agent.frame[1], np.ones(shape=7056)))
+        self.assertTrue(np.array_equal(agent.frame[2], np.ones(shape=7056)))
+        self.assertTrue(np.array_equal(agent.frame[3], np.ones(shape=7056)))
+
+        self.assertEquals(agent.episode_step, 4, "Step 4")
+        self.assertEquals(agent.step_counter, 4, "Step 4")
+        self.assertEquals(agent.last_action, 3, "last action")
+        self.assertTrue(np.array_equal(agent.frame[0], np.ones(shape=7056)))
+
     def test_model_action(self):
         np.random.seed(1)
 

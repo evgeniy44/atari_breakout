@@ -10,9 +10,10 @@ class DeepQAgent(agent.Agent):
 
     def __init__(self, action_space, normalizer, model_network, target_network, epsilon=1, alpha=0.5, gamma=0.99,
                  lambda_=0.7, minibatch_size=32,
-                 epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=70000):
+                 epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=70000, epsilon_decay_frequency = 5000):
         super(DeepQAgent, self).__init__(action_space)
 
+        self.epsilon_decay_frequency = epsilon_decay_frequency
         self.normalizer = normalizer
         self.frame_size = frame_size
         self.steps_to_copy = steps_to_copy
@@ -63,7 +64,7 @@ class DeepQAgent(agent.Agent):
             act = np.random.choice(ties)  # actions 0 and 1 do nothing in Atari breakout
 
         if self.epsilon_decay:
-            if self.step_counter > self.epoch_length and self.step_counter % 5000 == 0:
+            if self.step_counter > self.epoch_length and self.step_counter % self.epsilon_decay_frequency == 0:
                 self.epsilon = max(.01, self.epsilon * .98)
 
         self.last_action = act
