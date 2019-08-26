@@ -14,3 +14,11 @@ class InputNormalizer:
         flatten_state = np.reshape(resized_state, (1, self.dimensions[0] * self.dimensions[1]))
         flatten_state = flatten_state.astype('float32') / 255
         return flatten_state
+
+    def normalize_input(self, frame, current_action):
+        flatten_state = np.reshape(frame, (1, frame.shape[0] * frame.shape[1]))
+        flatten_action = np.array(current_action)
+        flatten_action = flatten_action.astype('float32')
+
+        normalized = np.append(flatten_state, flatten_action)
+        return np.reshape(normalized, (1, frame.shape[0] * frame.shape[1] + 1))

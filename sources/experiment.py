@@ -1,5 +1,5 @@
 import numpy as np
-from main import plotting as plotting
+from sources import plotting as plotting
 
 
 class Experiment(object):

@@ -1,4 +1,4 @@
-from main import agent
+from sources import agent
 import numpy as np
 import cv2
 
@@ -7,7 +7,7 @@ from keras import layers
 from keras import optimizers
 from matplotlib import pyplot as plt
 
-from main.replay import ReplayMemory
+from sources.replay import ReplayMemory
 
 INPUT_SIZE = 84 * 84 * 4 + 1
 
@@ -56,7 +56,7 @@ class DeepQAgent(agent.Agent):
             max_value = -10000000
             ties = []
             for current_action in range(3):  # left or right
-                action_value = self.model_network.predict(self.normalize(self.frame, current_action), batch_size=1,
+                action_value = self.model_network.predict(self.normalizer.normalize_input(self.frame, current_action), batch_size=1,
                                                           verbose=False)
                 if np.ndarray.item(action_value) > max_value:
                     ties.clear()
@@ -141,14 +141,6 @@ class DeepQAgent(agent.Agent):
     def reset(self):
         self.episode_step = 0
         pass
-
-    def normalize(self, state, current_action):
-        flatten_state = np.reshape(self.frame, (1, INPUT_SIZE - 1))
-        flatten_action = np.array(current_action)
-        flatten_action = flatten_action.astype('float32')
-
-        normalized = np.append(flatten_state, flatten_action)
-        return np.reshape(normalized, (1, INPUT_SIZE))
 
     def build_model(self):
         model = models.Sequential()

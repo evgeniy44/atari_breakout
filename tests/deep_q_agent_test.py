@@ -3,7 +3,7 @@ import unittest
 from gym.spaces.discrete import Discrete
 import numpy as np
 
-from main.deep_q_agent import DeepQAgent
+from sources.deep_q_agent import DeepQAgent
 
 
 class DeepQAgentTest(unittest.TestCase):
