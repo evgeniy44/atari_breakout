@@ -1,5 +1,6 @@
 import numpy as np
-import plotting as plotting
+from main import plotting as plotting
+
 
 class Experiment(object):
     def __init__(self, env, agent):

@@ -17,12 +17,21 @@ class ReplayMemory(object):
 
     def observe(self, state, action, reward, done):
         index = self.num_observed % self.max_size
-        self.samples['state'][index, :] = state
+        self.samples['state'][index, :] = np.reshape(state, (1, self.observation_size))
         self.samples['action'][index, :] = action
         self.samples['reward'][index, :] = reward
         self.samples['terminal'][index, :] = done
 
         self.num_observed += 1
+
+    #     if index == 10000:
+    #         dpl = self.check_duplicates()
+    #
+    # def check_duplicates(self):
+    #     input = self.samples['state'][:10000, :, :]
+    #     unique, indices, counts = np.unique(input, axis=0, return_index=True, return_counts=True)
+    #     return unique
+
 
     def sample_minibatch(self, minibatch_size):
         max_index = min(self.num_observed, self.max_size) - 1

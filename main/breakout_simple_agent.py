@@ -1,4 +1,4 @@
-import agent
+from main import agent
 import matplotlib.pyplot as plt
 import cv2
 

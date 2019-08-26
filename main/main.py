@@ -1,8 +1,7 @@
 import gym
 
-from breakout_simple_agent import SimpleBreakoutAgent
-from deep_q_agent import DeepQAgent
-from experiment import Experiment
+from main.deep_q_agent import DeepQAgent
+from main.experiment import Experiment
 
 import tensorflow as tf
 from tensorflow.python.client import device_lib
