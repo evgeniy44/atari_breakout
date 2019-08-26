@@ -10,7 +10,8 @@ class DeepQAgent(agent.Agent):
 
     def __init__(self, action_space, normalizer, model_network, target_network, epsilon=1, alpha=0.5, gamma=0.99,
                  lambda_=0.7, minibatch_size=32,
-                 epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=70000, epsilon_decay_frequency = 5000):
+                 epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=70000,
+                 epsilon_decay_frequency=5000):
         super(DeepQAgent, self).__init__(action_space)
 
         self.epsilon_decay_frequency = epsilon_decay_frequency
@@ -89,20 +90,20 @@ class DeepQAgent(agent.Agent):
         (state, action, reward, s_next, is_terminal) = self.experience_replay.sample_minibatch(
             self.minibatch_size)  # return data from 32 steps
 
-        s_next_predictions = np.zeros((self.minibatch_size, 2), dtype=np.float32)  # num actions = 2
+        s_next_predictions = np.zeros((self.minibatch_size, self.num_actions), dtype=np.float32)
 
-        for current_action in range(3):  # left and right
-            actions = np.full(shape=(self.minibatch_size, 1, 1), fill_value=current_action).astype('float32')
-            input = np.reshape(np.append(s_next, actions, axis=2), (self.minibatch_size, INPUT_SIZE))
-            predict = self.target_network.predict(input)
+        for current_action in range(self.num_actions):  # left and right
+            actions = np.full(shape=(self.minibatch_size, 1), fill_value=current_action).astype('float32')
+            prediction_input = np.append(s_next, actions, axis=1)
+            predict = self.target_network.predict(prediction_input)
             s_next_predictions[:, current_action] = np.reshape(predict, self.minibatch_size)
 
         s_next_max_values = s_next_predictions.max(axis=1, keepdims=True)
-        expected_state_values = (1 - is_terminal) * self.gamma * s_next_max_values + reward
-        formatted_actions = np.reshape(action, (self.minibatch_size, 1, 1))
+        expected_state_values = (1 - np.reshape(is_terminal, (self.minibatch_size, 1)))\
+                                * self.gamma * s_next_max_values + np.reshape(reward, (self.minibatch_size, 1))
+        formatted_actions = np.reshape(action, (self.minibatch_size, 1))
 
-        current_state_and_action = np.reshape(np.append(s_next, formatted_actions, axis=2),
-                                              (self.minibatch_size, INPUT_SIZE))
+        current_state_and_action = np.append(state, formatted_actions, axis=1)
 
         mse, mae = self.model_network.train_on_batch(current_state_and_action, expected_state_values)
 

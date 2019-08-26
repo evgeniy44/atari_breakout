@@ -9,7 +9,8 @@ class ReplayMemory(object):
         self.num_observed = 0
         self.max_size = max_size
         self.samples = {
-            'state': np.zeros(self.max_size * 1 * self.observation_size, dtype=np.float32).reshape((self.max_size, 1, self.observation_size)),
+            'state': np.zeros(self.max_size * 1 * self.observation_size, dtype=np.float32).reshape(
+                (self.max_size, self.observation_size)),
             'action': np.zeros(self.max_size * 1, dtype=np.int16).reshape((self.max_size, 1)),
             'reward': np.zeros(self.max_size * 1).reshape((self.max_size, 1)),
             'terminal': np.zeros(self.max_size * 1, dtype=np.int16).reshape((self.max_size, 1)),
@@ -17,7 +18,7 @@ class ReplayMemory(object):
 
     def observe(self, state, action, reward, done):
         index = self.num_observed % self.max_size
-        self.samples['state'][index, :] = np.reshape(state, (1, self.observation_size))
+        self.samples['state'][index, :] = np.reshape(state, self.observation_size)
         self.samples['action'][index, :] = action
         self.samples['reward'][index, :] = reward
         self.samples['terminal'][index, :] = done
@@ -31,7 +32,6 @@ class ReplayMemory(object):
     #     input = self.samples['state'][:10000, :, :]
     #     unique, indices, counts = np.unique(input, axis=0, return_index=True, return_counts=True)
     #     return unique
-
 
     def sample_minibatch(self, minibatch_size):
         max_index = min(self.num_observed, self.max_size) - 1

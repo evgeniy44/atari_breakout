@@ -18,9 +18,9 @@ env = gym.make('Breakout-v0')
 env.reset()
 model_factory = ModelFactory()
 dimensions = (84, 84)
-agent = DeepQAgent(env.action_space, InputNormalizer(dimensions),
-                   model_network=model_factory.build_model(dimensions[0] * dimensions[1] + 1),
-                   target_network=model_factory.build_model(dimensions[0] * dimensions[1] + 1))
+agent = DeepQAgent(env.action_space, InputNormalizer(dimensions, total_actions=4),
+                   model_network=model_factory.build_model(4 * dimensions[0] * dimensions[1] + 1),
+                   target_network=model_factory.build_model(4 * dimensions[0] * dimensions[1] + 1))
 experiment = Experiment(env, agent)
 experiment.run_it(5000000, interactive=True)
 
