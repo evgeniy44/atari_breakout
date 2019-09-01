@@ -24,32 +24,10 @@ class DeepQAgentTest(unittest.TestCase):
 
         action = agent.act(state)
 
-        self.assertEquals(action, 1, "Should Start with Action 1")
+        self.assertEquals(action, 3, "Should Start with Action 1")
 
         self.assertEquals(agent.episode_step, 1, "Step 4")
         self.assertEquals(agent.step_counter, 1, "Step 4")
-        self.assertEquals(agent.last_action, 1, "last action")
-        self.assertTrue(np.array_equal(agent.frame[:, :, 0], np.ones(shape=(84, 84))))
-
-    def test_random_action(self):
-        np.random.seed(1)
-        normalizer = Mock()
-        normalizer.normalize_state.return_value = np.ones(shape=(84, 84))
-
-        model = MagicMock()
-        target = MagicMock()
-        agent = DeepQAgent(action_space=Discrete(4), normalizer=normalizer,
-                           experience_size=100, model_network=model,
-                           target_network=target)
-        state = np.random.randint(256, size=(210, 16, 3))
-
-        self.assertEquals(agent.act(state), 1, "Should Start with Action 1")
-        self.assertEquals(agent.act(state), 1, "Should Start with Action 1")
-        self.assertEquals(agent.act(state), 1, "Should Start with Action 1")
-        self.assertEquals(agent.act(state), 3, "Should Make random action")
-
-        self.assertEquals(agent.episode_step, 4, "Step 4")
-        self.assertEquals(agent.step_counter, 4, "Step 4")
         self.assertEquals(agent.last_action, 3, "last action")
         self.assertTrue(np.array_equal(agent.frame[:, :, 0], np.ones(shape=(84, 84))))
 
@@ -65,12 +43,12 @@ class DeepQAgentTest(unittest.TestCase):
                            epoch_length=1, epsilon_decay_frequency=2)
         state = np.random.randint(256, size=(210, 16, 3))
 
-        self.assertEquals(agent.act(state), 1, "Should Start with Action 1")
+        self.assertEquals(agent.act(state), 3, "Should Start with Action 1")
         self.assertTrue(np.array_equal(agent.frame[:, :, 0], np.ones(shape=(84, 84))))
         self.assertTrue(np.array_equal(agent.frame[:, :, 1], np.zeros(shape=(84, 84))))
         self.assertEquals(agent.epsilon, 1)
 
-        self.assertEquals(agent.act(state), 1, "Should Start with Action 1")
+        self.assertEquals(agent.act(state), 3, "Should Start with Action 1")
         self.assertTrue(np.array_equal(agent.frame[:, :, 0], np.ones(shape=(84, 84))))
         self.assertTrue(np.array_equal(agent.frame[:, :, 1], np.ones(shape=(84, 84))))
         self.assertTrue(np.array_equal(agent.frame[:, :, 2], np.zeros(shape=(84, 84))))
@@ -124,6 +102,40 @@ class DeepQAgentTest(unittest.TestCase):
         frame[:, :, 3] = np.ones(shape=(84, 84))
 
         self.assertTrue(np.array_equal(frame, model.predict.call_args_list[0][0][0][0]))
+
+        self.assertTrue(np.array_equal(frame, agent.frame))
+        self.assertEquals(agent.last_action, 1)
+
+    def test_model_action(self):
+        np.random.seed(1)
+
+        model = MagicMock()
+        target = MagicMock()
+
+        model.predict = MagicMock(
+            side_effect=[np.array([[0.23, 0.75, 0.11, 0.007]])])
+        normalizer = Mock()
+        normalizer.normalize_state.return_value = np.ones(shape=(84, 84))
+
+        agent = DeepQAgent(action_space=Discrete(4), normalizer=normalizer, experience_size=100, model_network=model,
+                           target_network=target, epsilon=0)
+        agent.episode_step = 4
+        agent.step_counter = 4
+
+        state = np.random.randint(256, size=(210, 16, 3))
+
+        self.assertEquals(agent.act(state), 1, "Should Make Action according to the model")
+
+        self.assertEquals(agent.episode_step, 5, "Step 4")
+        self.assertEquals(agent.step_counter, 5, "Step 4")
+        self.assertTrue(np.array_equal(agent.frame[:, :, 0], np.ones(shape=(84, 84))))
+
+        normalizer.normalize_state.assert_called_once_with(state)
+
+        frame = np.zeros((84, 84, 4))
+        frame[:, :, 0] = np.ones(shape=(84, 84))
+
+        self.assertTrue(np.array_equal(np.append(agent.frame[:,:,1:], agent.frame[:,:,:1], axis=2), model.predict.call_args_list[0][0][0][0]))
 
         self.assertTrue(np.array_equal(frame, agent.frame))
         self.assertEquals(agent.last_action, 1)
@@ -188,7 +200,8 @@ class DeepQAgentTest(unittest.TestCase):
         agent.learn(state1=np.zeros((84, 84)), action1=2, reward=1, state2=None, done=False)
 
         expected_training_action_values = np.array(
-            [[0.15 * agent.gamma, 0.02, 0.03, 0.04], [0.05, 0.75 * agent.gamma, 0.07, 0.08], [0.09, 0.1, 0.98 * agent.gamma + 1, 0.12], [0.13, 0.14, 0.15, 0]])
+            [[0.15 * agent.gamma, 0.02, 0.03, 0.04], [0.05, 0.75 * agent.gamma, 0.07, 0.08],
+             [0.09, 0.1, 0.98 * agent.gamma + 1, 0.12], [0.13, 0.14, 0.15, 0]])
 
         self.assertTrue(np.array_equal(states, model.train_on_batch.call_args_list[0][0][0]))
         self.assertTrue(

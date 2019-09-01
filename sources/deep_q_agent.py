@@ -4,6 +4,7 @@ from sources import agent
 from sources.replay import ReplayMemory
 import matplotlib.pyplot as plt
 import h5py
+import datetime
 
 INPUT_SIZE = 84 * 84 * 4 + 1
 
@@ -12,7 +13,7 @@ class DeepQAgent(agent.Agent):
 
     def __init__(self, action_space, normalizer, model_network, target_network, epsilon=1, gamma=0.99,
                  minibatch_size=32, epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=200000,
-                 epsilon_decay_frequency=5000):
+                 epsilon_decay_frequency=5000, epsilon_decay=True):
         super(DeepQAgent, self).__init__(action_space)
 
         self.epsilon_decay_frequency = epsilon_decay_frequency
@@ -35,19 +36,19 @@ class DeepQAgent(agent.Agent):
         self.maes = []
         self.mses = []
 
-        if self.epsilon == 1:
-            self.epsilon_decay = True
-        else:
-            self.epsilon_decay = False
+        self.epsilon_decay = epsilon_decay
 
     def act(self, state):
         self.frame[:, :, self.episode_step % self.frame_size] = self.normalizer.normalize_state(state)
-        if self.episode_step % self.frame_size != self.frame_size - 1:
-            act = self.last_action  # do nothing
-        elif np.random.random() < self.epsilon:
+        if np.random.random() < self.epsilon:
             act = np.random.randint(3) + 1
         else:
-            action_values = self.model_network.predict(np.reshape(self.frame, (1, 84, 84, 4)), batch_size=1,
+            if self.episode_step % self.frame_size == self.frame_size - 1:
+                observed_state = self.frame
+            else:
+                observed_state = np.append(self.frame[:, :, (self.episode_step + 1) % self.frame_size:],
+                                           self.frame[:, :, : (self.episode_step + 1) % self.frame_size], axis=2)
+            action_values = self.model_network.predict(np.reshape(observed_state, (1, 84, 84, 4)), batch_size=1,
                                                        verbose=False)
             act = action_values.argmax()
 
@@ -89,6 +90,9 @@ class DeepQAgent(agent.Agent):
 
         if self.step_counter % self.steps_to_copy == 0:
             self.target_network.set_weights(self.model_network.get_weights())
+
+        if self.step_counter % 100_000:
+            self.model_network.save_weights("../models/model" + datetime.datetime.now().isoformat())
 
         return mse, mae
 
