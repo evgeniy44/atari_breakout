@@ -3,6 +3,7 @@ import numpy as np
 from sources import agent
 from sources.replay import ReplayMemory
 import matplotlib.pyplot as plt
+import h5py
 
 INPUT_SIZE = 84 * 84 * 4 + 1
 
@@ -10,8 +11,7 @@ INPUT_SIZE = 84 * 84 * 4 + 1
 class DeepQAgent(agent.Agent):
 
     def __init__(self, action_space, normalizer, model_network, target_network, epsilon=1, gamma=0.99,
-                 minibatch_size=32,
-                 epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=70000,
+                 minibatch_size=32, epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=200000,
                  epsilon_decay_frequency=5000):
         super(DeepQAgent, self).__init__(action_space)
 
@@ -82,7 +82,7 @@ class DeepQAgent(agent.Agent):
 
         mse, mae = self.model_network.train_on_batch(state, expected_all_state_values)
 
-        if self.step_counter % 1000 == 0:
+        if self.step_counter % 5000 == 0:
             self.maes.append(mae)
             self.mses.append(mse)
             print("Step: " + str(self.step_counter) + ", mae: " + str(mae) + ", mse: " + str(mse))

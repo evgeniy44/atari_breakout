@@ -13,15 +13,5 @@ class TestInputNormalizer(TestCase):
         initial_state = imageio.imread('../resources/output.png')
         normalized_state = normalizer.normalize_state(initial_state)
 
-        self.assertEquals(normalized_state.shape, (1, 84 * 84))
+        self.assertEquals(normalized_state.shape, (84, 84))
         self.assertTrue((normalized_state <= 1).all())
-        self.assertTrue(np.array_equal(normalized_state, np.load("../resources/output_normalized.npy", allow_pickle=True)))
-
-    def test_normalize_input(self):
-        normalizer = InputNormalizer((84, 84), total_actions=4)
-
-        normalized_input = normalizer.normalize_input(
-            frame=np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]), current_action=3)
-
-        self.assertTrue(
-            np.array_equal(np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1]]), normalized_input))
