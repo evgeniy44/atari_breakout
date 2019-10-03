@@ -9,7 +9,7 @@ class ModelFactory:
 
     def build_model(self, weights_file):
         model = models.Sequential()
-        model.add(layers.Conv2D(32, (8, 8), activation='relu', strides=4, input_shape=(84, 84, 4)))
+        model.add(layers.Conv2D(32, (8, 8), activation='relu', strides=(4, 4), input_shape=(84, 84, 4)))
         model.add(layers.Conv2D(64, (4, 4), activation='relu', strides=2))
         model.add(layers.Conv2D(64, (3, 3), activation='relu', strides=1))
         model.add(layers.Flatten())
@@ -17,7 +17,7 @@ class ModelFactory:
         model.add(layers.Dense(4))
 
         rms = optimizers.RMSprop(lr=self.learning_rate)
-        model.compile(optimizer=rms, loss='mse', metrics=['mae'])
+        model.compile(optimizer=rms, loss="mse")
         if weights_file is not None:
             model.load_weights(weights_file)
 

@@ -12,7 +12,7 @@ INPUT_SIZE = 84 * 84 * 4 + 1
 class DeepQAgent(agent.Agent):
 
     def __init__(self, action_space, normalizer, model_network, target_network, epsilon=1, gamma=0.99,
-                 minibatch_size=32, epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=200000,
+                 minibatch_size=32, epoch_length=50000, steps_to_copy=10000, frame_size=4, experience_size=330000,
                  epsilon_decay_frequency=5000, epsilon_decay=True):
         super(DeepQAgent, self).__init__(action_space)
 
@@ -63,9 +63,9 @@ class DeepQAgent(agent.Agent):
         return act
 
     def learn(self, state1, action1, reward, state2, done):
-        self.experience_replay.observe(self.normalizer.normalize_state(state1), action1, reward, done)
+        self.experience_replay.observe(self.normalizer.normalize_state(state1), action1, np.clip(reward, a_min=0, a_max=1), done)
         if self.step_counter > self.epoch_length:
-            self.current_loss = self.update_model()
+            self.update_model()
 
     def update_model(self):
         (state, action, reward, s_next, is_terminal) = self.experience_replay.sample_minibatch(
@@ -81,20 +81,19 @@ class DeepQAgent(agent.Agent):
         for i in range(self.minibatch_size):
             expected_all_state_values[i, int(action[i])] = expected_best_action_state_values[i]
 
-        mse, mae = self.model_network.train_on_batch(state, expected_all_state_values)
+        mse = self.model_network.train_on_batch(state, expected_all_state_values)
 
-        if self.step_counter % 5000 == 0:
-            self.maes.append(mae)
+        if self.step_counter % 100_000 == 0:
             self.mses.append(mse)
-            print("Step: " + str(self.step_counter) + ", mae: " + str(mae) + ", mse: " + str(mse))
+            print("Step: " + str(self.step_counter) + ", mse: " + str(mse))
 
         if self.step_counter % self.steps_to_copy == 0:
             self.target_network.set_weights(self.model_network.get_weights())
 
-        if self.step_counter % 100_000:
-            self.model_network.save_weights("../models/model" + datetime.datetime.now().isoformat())
+        if self.step_counter % 100_000 == 0:
+            self.model_network.save_weights("../models/model" + str(datetime.datetime.now().isoformat()))
 
-        return mse, mae
+        return mse
 
     def reset(self):
         self.episode_step = 0

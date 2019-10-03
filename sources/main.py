@@ -32,7 +32,7 @@ def main(argv):
     agent = DeepQAgent(env.action_space, InputNormalizer(dimensions, total_actions=4),
                        model_network=model_factory.build_model(weights_file=weights_file),
                        target_network=model_factory.build_model(weights_file=weights_file),
-                       epsilon=0.1)
+                       epsilon=0.01)
     experiment = Experiment(env, agent)
     experiment.run_it(5000000, interactive=True)
 
