@@ -4,5 +4,5 @@ numpy
 h5py
 gym
 keras
-tensorflow-gpu==1.13.1
+tensorflow-gpu==1.15.4
 gym[atari]
